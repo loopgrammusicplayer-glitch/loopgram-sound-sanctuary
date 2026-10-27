@@ -24,3 +24,22 @@ describe("lounges", () => {
     expect(loungeNow(3, 540_000).index).toBe(0);
   });
 });
+
+import { postPartyMedia } from "@/lib/social";
+import { activeQuests, parseLive, partyAllowed } from "@/lib/live-settings";
+describe("watch together for both sources", () => {
+  it("owner upload becomes a file party", () => expect(postPartyMedia("https://pub-x.r2.dev/a/b.mp4")).toEqual({ video: "", file: "https://pub-x.r2.dev/a/b.mp4" }));
+  it("youtube post becomes a youtube party", () => expect(postPartyMedia("https://youtu.be/dQw4w9WgXcQ")).toEqual({ video: "dQw4w9WgXcQ" }));
+  it("other links are not syncable", () => expect(postPartyMedia("https://vimeo.com/123")).toBeNull());
+  it("owner can switch off posts only", () => {
+    const s = parseLive({ partyPosts: false });
+    expect(partyAllowed(s, "tmdb")).toBe(true);
+    expect(partyAllowed(s, "post")).toBe(false);
+  });
+  it("master switch blocks both", () => expect(partyAllowed(parseLive({ partyOn: false }), "tmdb")).toBe(false));
+  it("owner quest edits apply and off quests disappear", () => {
+    const q = activeQuests(parseLive({ quests: { listen: { on: false, goal: 2, points: 50 }, watch: { on: true, goal: 5, points: 300 }, share: { on: true, goal: 1, points: 200 } } }));
+    expect(q.map((x) => x.id)).toEqual(["watch", "share"]);
+    expect(q[0]).toMatchObject({ goal: 5, points: 300 });
+  });
+});
