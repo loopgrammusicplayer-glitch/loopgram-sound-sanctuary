@@ -91,9 +91,9 @@ function TitlePage() {
               {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}{saved ? "Saved" : "Save"}
             </button>
             <button onClick={() => { share(); questStep("share"); }} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Share</button>
-            {trailer && <button onClick={async () => {
+            {trailer && partyAllowed(live, "tmdb") && <button onClick={async () => {
               try {
-                const r = await createParty({ data: { video: trailer.key, title: d.title, type: t, id: d.id } });
+                const r = await createParty({ data: { kind: "tmdb", video: trailer.key, title: d.title, type: t, id: d.id } });
                 localStorage.setItem(`lg:party:${r.code}`, r.hostKey);
                 navigate({ to: "/party/$code", params: { code: r.code } });
               } catch (e: any) { toast.error(e?.message ?? "Couldn't start a party"); }
