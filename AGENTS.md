@@ -26,3 +26,5 @@
 - TMDB answers are saved permanently (no TTL) in DynamoDB `TMDB#<cacheKey>`/`RESPONSE` via catalog.server.ts; DynamoDB is read only as the last fallback after Redis so the site survives TMDB being off/revoked. Why: owner requires data to outlive TMDB access.
 - Periodic work (TMDB import step + SQS drain) runs from `heartbeat()` (heartbeat.server.ts), started via `ctx.waitUntil` in src/server.ts and gated by Redis `lg:heartbeat` (≈1/min across instances). Why: no external scheduler; every step is idempotent so cut-off runs just retry.
 - Owner posts are searchable only through the separate Algolia index `loopgram_posts`, written by `syncPost()`/`reconcilePosts()` from the DynamoDB post state (PUBLISHED only). Why: keeps the two content sources distinguishable and drafts out of search.
+
+- Live features (Loop Party, Lounges) keep state only in Redis with TTLs via social.functions.ts; hot reads use a short per-isolate memo and writes use per-IP local rate limits. Streaks/quests are local-first in browser storage (src/lib/streak.ts). Why: protects Redis under bursts and keeps DynamoDB/R2 off ordinary page reads.

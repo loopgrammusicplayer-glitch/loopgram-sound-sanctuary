@@ -1,7 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, BookmarkCheck, Share2, User } from "lucide-react";
+import { Bookmark, BookmarkCheck, Share2, User, Users } from "lucide-react";
+import { toast } from "sonner";
+import { createParty } from "@/lib/social.functions";
+import { questStep } from "@/lib/streak";
 import { shareLink } from "@/lib/share";
 import { api, img, track } from "@/lib/api";
 import { signal, toggleSave, useStore } from "@/lib/store";
@@ -36,12 +39,14 @@ function TitlePage() {
   // Videos that failed in the embedded player this session (removed, private, region-blocked) — never retried.
   const [failed, setFailed] = useState<string[]>([]);
   const d = q.data;
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!d) return;
     document.title = `${d.title} — LoopgramChannel`;
     signal("open", d.genres.map((g: any) => g.id), d.cast.slice(0, 3).map((c: any) => c.id));
     track(t, d.id, d.title, d.poster_path);
+    questStep("watch");
   }, [d?.id]);
 
   if (q.isPending) return <Page><div className="aspect-video animate-pulse bg-muted" /></Page>;
@@ -85,7 +90,14 @@ function TitlePage() {
             <button onClick={() => toggleSave({ id: d.id, type: t, title: d.title, poster: d.poster_path, date: d.next_episode?.air_date ?? d.date, genre_ids: d.genres.map((g: any) => g.id) })} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm">
               {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}{saved ? "Saved" : "Save"}
             </button>
-            <button onClick={share} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Share</button>
+            <button onClick={() => { share(); questStep("share"); }} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Share</button>
+            {trailer && <button onClick={async () => {
+              try {
+                const r = await createParty({ data: { video: trailer.key, title: d.title, type: t, id: d.id } });
+                localStorage.setItem(`lg:party:${r.code}`, r.hostKey);
+                navigate({ to: "/party/$code", params: { code: r.code } });
+              } catch (e: any) { toast.error(e?.message ?? "Couldn't start a party"); }
+            }} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm"><Users className="h-4 w-4" />Watch together</button>}
             <Link to="/compare" search={{ a: `${t}:${d.id}` }} className="rounded-full bg-secondary px-4 py-2 text-sm">Compare</Link>
           </div>
         </div>
