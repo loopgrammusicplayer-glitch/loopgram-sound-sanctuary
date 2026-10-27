@@ -28,9 +28,14 @@ export function recordVisit() {
   save({ ...s, ...bumpStreak(s, Date.now()) });
 }
 
+// Owner-edited quest goals/points (from Studio); defaults until the site settings load.
+let questConfig: { id: QuestId; goal: number; points: number }[] = QUESTS;
+export function setQuestConfig(q: { id: QuestId; goal: number; points: number }[]) { questConfig = q; }
+
 export function questStep(id: QuestId, n = 1) {
   const s = rollDay(load());
-  const q = QUESTS.find((x) => x.id === id)!;
+  const q = questConfig.find((x) => x.id === id);
+  if (!q) return; // quest switched off by the owner
   const before = s.quests[id];
   if (before >= q.goal) return;
   const after = Math.min(q.goal, before + n);
