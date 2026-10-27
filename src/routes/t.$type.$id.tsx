@@ -39,6 +39,7 @@ function TitlePage() {
   // Videos that failed in the embedded player this session (removed, private, region-blocked) — never retried.
   const [failed, setFailed] = useState<string[]>([]);
   const d = q.data;
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!d) return;
