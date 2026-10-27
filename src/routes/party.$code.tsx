@@ -94,7 +94,7 @@ function PartyPage() {
     <Page>
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
         {joined && isFile ? (
-          <video ref={vid} src={d.state.file} playsInline controls={isHost} onTimeUpdate={(e) => { local.current = e.currentTarget.currentTime; }}
+          <video ref={vid} src={d.state.file} playsInline onTimeUpdate={(e) => { local.current = e.currentTarget.currentTime; }}
             onLoadedMetadata={() => { const t = partyPosition(d.state, Date.now() + skew.current); cmd("seekTo", [t]); if (d.state.playing) cmd("playVideo"); }}
             className="h-full w-full bg-muted" />
         ) : joined ? (
