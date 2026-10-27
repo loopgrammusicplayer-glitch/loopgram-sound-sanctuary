@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Bookmark, BookmarkCheck, Share2, User, Users } from "lucide-react";
 import { toast } from "sonner";
 import { createParty } from "@/lib/social.functions";
+import { partyAllowed } from "@/lib/live-settings";
+import { useLive } from "@/lib/use-live";
 import { questStep } from "@/lib/streak";
 import { shareLink } from "@/lib/share";
 import { api, img, track } from "@/lib/api";
@@ -40,6 +42,7 @@ function TitlePage() {
   const [failed, setFailed] = useState<string[]>([]);
   const d = q.data;
   const navigate = useNavigate();
+  const live = useLive();
 
   useEffect(() => {
     if (!d) return;
