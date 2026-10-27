@@ -1,7 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Download, ExternalLink, Share2, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Download, ExternalLink, Share2, ThumbsUp, ThumbsDown, Users } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { createParty } from "@/lib/social.functions";
+import { partyAllowed } from "@/lib/live-settings";
+import { useLive } from "@/lib/use-live";
+import { postPartyMedia } from "@/lib/social";
+import { questStep } from "@/lib/streak";
 import { PostVideo } from "@/components/PostView";
 import { parseVideoSource } from "@/lib/video-source";
 import { PostTile } from "@/components/PostTile";
@@ -31,6 +38,8 @@ function PostWatch() {
   // Authoritative check: the post comes from its own database row, not the cached list.
   const { data: post } = useSuspenseQuery(postQuery(id));
   const [more, setMore] = useState(false);
+  const live = useLive();
+  const navigate = useNavigate();
   const [vote, setVote] = useState<0 | 1 | -1>(0);
   useEffect(() => { setMore(false); setVote((Number(localStorage.getItem(`lg:vote:${id}`)) || 0) as 0 | 1 | -1); window.scrollTo(0, 0); }, [id]);
   const setV = (v: 0 | 1 | -1) => { const n = vote === v ? 0 : v; setVote(n); localStorage.setItem(`lg:vote:${id}`, String(n)); };
@@ -67,7 +76,14 @@ function PostWatch() {
                 <span className="my-2 w-px bg-border" />
                 <button onClick={() => setV(-1)} aria-pressed={vote === -1} aria-label="Dislike" className="px-4 py-2 hover:bg-accent"><ThumbsDown className={`h-4 w-4 ${vote === -1 ? "fill-current" : ""}`} /></button>
               </div>
-              <button onClick={share} className={pill}><Share2 className="h-4 w-4" />Share</button>
+              <button onClick={() => { share(); questStep("share"); }} className={pill}><Share2 className="h-4 w-4" />Share</button>
+              {partyAllowed(live, "post") && postPartyMedia(post.videoUrl) && <button onClick={async () => {
+                try {
+                  const r = await createParty({ data: { kind: "post", id: post.id } });
+                  localStorage.setItem(`lg:party:${r.code}`, r.hostKey);
+                  navigate({ to: "/party/$code", params: { code: r.code } });
+                } catch (e: any) { toast.error(e?.message ?? "Couldn't start a party"); }
+              }} className={pill}><Users className="h-4 w-4" />Watch together</button>}
               {isFile && <a href={post.videoUrl} download className={pill}><Download className="h-4 w-4" />Download</a>}
               {ext && <a href={post.videoUrl} target="_blank" rel="noopener noreferrer" className={pill}><ExternalLink className="h-4 w-4" />Open on {ext.label}</a>}
             </div>

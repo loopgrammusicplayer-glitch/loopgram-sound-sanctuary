@@ -31,6 +31,7 @@ function PartyPage() {
   const [hostKey, setHostKey] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const frame = useRef<HTMLIFrameElement>(null);
+  const vid = useRef<HTMLVideoElement>(null);
   const local = useRef(0); // player's own reported time
   const lastV = useRef(0);
   const skew = useRef(0);
@@ -49,8 +50,20 @@ function PartyPage() {
     addEventListener("message", onMsg); return () => removeEventListener("message", onMsg);
   }, []);
 
-  const cmd = (func: string, args: unknown[] = []) => frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
   const d = q.data;
+  const isFile = !!d?.state.file;
+  // One control surface for both players: YouTube embed (trailers, YouTube posts) or a native player (owner uploads).
+  const cmd = (func: "seekTo" | "playVideo" | "pauseVideo", args: unknown[] = []) => {
+    const v = vid.current;
+    if (isFile) {
+      if (!v) return;
+      if (func === "seekTo") { try { v.currentTime = Number(args[0]) || 0; } catch {} }
+      else if (func === "playVideo") v.play().catch(() => {});
+      else v.pause();
+      return;
+    }
+    frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), "*");
+  };
   if (d) skew.current = d.now - Date.now();
 
   // Apply host state: on every new version, and drift-correct when >2s off.
@@ -80,14 +93,18 @@ function PartyPage() {
   return (
     <Page>
       <div className="relative aspect-video w-full overflow-hidden bg-muted">
-        {joined ? (
+        {joined && isFile ? (
+          <video ref={vid} src={d.state.file} playsInline onTimeUpdate={(e) => { local.current = e.currentTarget.currentTime; }}
+            onLoadedMetadata={() => { const t = partyPosition(d.state, Date.now() + skew.current); cmd("seekTo", [t]); if (d.state.playing) cmd("playVideo"); }}
+            className="h-full w-full bg-muted" />
+        ) : joined ? (
           <iframe ref={frame} onLoad={() => frame.current?.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: 1, channel: "widget" }), "*")}
             className="h-full w-full" title={d.state.title}
             src={`https://www.youtube-nocookie.com/embed/${d.state.video}?autoplay=1&playsinline=1&rel=0&controls=0&disablekb=1&enablejsapi=1&origin=${encodeURIComponent(origin)}`}
             allow="autoplay; encrypted-media; fullscreen" allowFullScreen />
         ) : (
           <div className="grid h-full place-items-center">
-            <img src={`https://i.ytimg.com/vi/${d.state.video}/hqdefault.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50" />
+            {!isFile && <img src={`https://i.ytimg.com/vi/${d.state.video}/hqdefault.jpg`} alt="" className="absolute inset-0 h-full w-full object-cover opacity-50" />}
             <button onClick={() => setJoined(true)} className="relative inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 font-bold text-primary-foreground"><Play className="h-5 w-5" />Join the party</button>
           </div>
         )}
@@ -106,7 +123,9 @@ function PartyPage() {
         </div>
         {!isHost && <p className="text-xs text-muted-foreground">The host controls play and pause. Your video follows along automatically.</p>}
         <LiveChat chat={d.chat} onSend={async (name, msg) => { await partyChat({ data: { code, name, msg } }); q.refetch(); }} />
-        <Link to="/t/$type/$id" params={{ type: d.state.type, id: String(d.state.id) }} className="text-sm text-primary underline">About this title</Link>
+        {d.state.type === "post"
+          ? <Link to="/post/$id" params={{ id: String(d.state.id) }} className="text-sm text-primary underline">About this video</Link>
+          : <Link to="/t/$type/$id" params={{ type: d.state.type, id: String(d.state.id) }} className="text-sm text-primary underline">About this title</Link>}
       </div>
     </Page>
   );

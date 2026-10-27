@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { Bookmark, BookmarkCheck, Share2, User, Users } from "lucide-react";
 import { toast } from "sonner";
 import { createParty } from "@/lib/social.functions";
+import { partyAllowed } from "@/lib/live-settings";
+import { useLive } from "@/lib/use-live";
 import { questStep } from "@/lib/streak";
 import { shareLink } from "@/lib/share";
 import { api, img, track } from "@/lib/api";
@@ -40,6 +42,7 @@ function TitlePage() {
   const [failed, setFailed] = useState<string[]>([]);
   const d = q.data;
   const navigate = useNavigate();
+  const live = useLive();
 
   useEffect(() => {
     if (!d) return;
@@ -91,9 +94,9 @@ function TitlePage() {
               {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}{saved ? "Saved" : "Save"}
             </button>
             <button onClick={() => { share(); questStep("share"); }} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Share</button>
-            {trailer && <button onClick={async () => {
+            {trailer && partyAllowed(live, "tmdb") && <button onClick={async () => {
               try {
-                const r = await createParty({ data: { video: trailer.key, title: d.title, type: t, id: d.id } });
+                const r = await createParty({ data: { kind: "tmdb", video: trailer.key, title: d.title, type: t, id: d.id } });
                 localStorage.setItem(`lg:party:${r.code}`, r.hostKey);
                 navigate({ to: "/party/$code", params: { code: r.code } });
               } catch (e: any) { toast.error(e?.message ?? "Couldn't start a party"); }

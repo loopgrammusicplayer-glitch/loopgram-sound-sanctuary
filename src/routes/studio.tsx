@@ -16,6 +16,7 @@ import { studioDeleteMedia } from "@/lib/upload.functions";
 import type { UploadTargetT } from "@/lib/upload-keys";
 import { Uploader } from "@/components/Uploader";
 import { PostsPanel } from "@/components/StudioPosts";
+import { LivePanel } from "@/components/StudioLive";
 import { VaultPanel } from "@/components/StudioVault";
 import { DownloadButton } from "@/components/DownloadButton";
 
@@ -128,6 +129,7 @@ function StudioPage() {
           {s === "overview" && <Overview />}
           {s === "users" && <UsersPanel />}
           {s === "posts" && <PostsPanel />}
+          {s === "live" && <LivePanel />}
           {s === "media" && <MediaPanel />}
           {s === "search" && <SearchPanel />}
           {s === "announcements" && <SettingsPanel />}

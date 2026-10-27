@@ -8,6 +8,7 @@ import { LOUNGES, loungeNow, SLOT_SEC } from "@/lib/social";
 import { getLounge, loungeChat, loungePing } from "@/lib/social.functions";
 import { postsQuery } from "@/lib/posts-query";
 import { questStep } from "@/lib/streak";
+import { useLive } from "@/lib/use-live";
 
 export const Route = createFileRoute("/lounge/$id")({
   loader: ({ params }) => {
@@ -35,12 +36,16 @@ function LoungePage() {
   const info = Route.useLoaderData();
   const idx = LOUNGES.findIndex((l) => l.id === id);
   const posts = useQuery(postsQuery);
-  // Owner-uploaded media posts, shared round-robin across lounges (all of them if there are few).
+  const live = useLive();
+  const picked = live.lounges[id]?.posts ?? [];
+  const closed = !live.loungesOn || live.lounges[id]?.on === false;
+  // Owner's playlist from Studio if set; otherwise media posts shared round-robin across lounges.
   const tracks = useMemo(() => {
     const all = (posts.data ?? []).filter((p) => isMedia(p.videoUrl)).sort((a, b) => a.createdAt - b.createdAt);
+    if (picked.length) return picked.map((pid) => all.find((p) => p.id === pid)).filter((p): p is NonNullable<typeof p> => !!p);
     const mine = all.filter((_, i) => i % LOUNGES.length === idx);
     return mine.length >= 2 ? mine : all;
-  }, [posts.data, idx]);
+  }, [posts.data, idx, picked.join(",")]);
   const room = useQuery({ queryKey: ["lounge", id], queryFn: () => getLounge({ data: { id } }), refetchInterval: 4000 });
   const { me } = useMe();
   const [on, setOn] = useState(false);
@@ -77,7 +82,9 @@ function LoungePage() {
           <h1 className="text-2xl font-black">{info.name}</h1>
           <p className="text-sm text-muted-foreground">{info.blurb} · <span className="font-semibold text-foreground">{room.data?.people ?? 0} listening now</span></p>
         </div>
-        {!tracks.length ? (
+        {closed ? (
+          <p className="rounded-xl border p-4 text-sm text-muted-foreground">This lounge is closed right now. Check back soon!</p>
+        ) : !tracks.length ? (
           <p className="rounded-xl border p-4 text-sm text-muted-foreground">{posts.isPending ? "Loading…" : "No music has been uploaded for this lounge yet. Check back soon!"}</p>
         ) : (
           <div className="rounded-xl border p-4">
@@ -88,7 +95,7 @@ function LoungePage() {
             <p className="mt-2 text-xs text-muted-foreground">Next track in {SLOT_SEC - offset}s{tracks.length > 1 && ` · Up next: ${tracks[(index + 1) % tracks.length]?.title || "Untitled"}`}</p>
           </div>
         )}
-        <LiveChat chat={room.data?.chat ?? []} onSend={async (name, msg) => { await loungeChat({ data: { id, name, msg } }); room.refetch(); }} />
+        {!closed && <LiveChat chat={room.data?.chat ?? []} onSend={async (name, msg) => { await loungeChat({ data: { id, name, msg } }); room.refetch(); }} />}
       </div>
     </Page>
   );
