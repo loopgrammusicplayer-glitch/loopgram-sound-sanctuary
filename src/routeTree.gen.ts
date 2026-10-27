@@ -15,6 +15,7 @@ import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ExploreRouteImport } from './routes/explore'
 import { Route as GameRouteImport } from './routes/game'
+import { Route as LiveRouteImport } from './routes/live'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PostsRouteImport } from './routes/posts'
 import { Route as SearchRouteImport } from './routes/search'
@@ -22,7 +23,9 @@ import { Route as StudioRouteImport } from './routes/studio'
 import { Route as WatchlistRouteImport } from './routes/watchlist'
 import { Route as ApiContentRouteImport } from './routes/api/content'
 import { Route as CollectionIdRouteImport } from './routes/collection.$id'
+import { Route as LoungeIdRouteImport } from './routes/lounge.$id'
 import { Route as OriginalIdRouteImport } from './routes/original.$id'
+import { Route as PartyCodeRouteImport } from './routes/party.$code'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
 import { Route as PostIdRouteImport } from './routes/post.$id'
 import { Route as ApiMediaImgRouteImport } from './routes/api/media/img'
@@ -63,6 +66,11 @@ const GameRoute = GameRouteImport.update({
   path: '/game',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LiveRoute = LiveRouteImport.update({
+  id: '/live',
+  path: '/live',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -98,9 +106,19 @@ const CollectionIdRoute = CollectionIdRouteImport.update({
   path: '/collection/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoungeIdRoute = LoungeIdRouteImport.update({
+  id: '/lounge/$id',
+  path: '/lounge/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OriginalIdRoute = OriginalIdRouteImport.update({
   id: '/original/$id',
   path: '/original/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartyCodeRoute = PartyCodeRouteImport.update({
+  id: '/party/$code',
+  path: '/party/$code',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PersonIdRoute = PersonIdRouteImport.update({
@@ -156,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/compare': typeof CompareRoute
   '/explore': typeof ExploreRoute
   '/game': typeof GameRoute
+  '/live': typeof LiveRoute
   '/login': typeof LoginRoute
   '/posts': typeof PostsRoute
   '/search': typeof SearchRoute
@@ -163,7 +182,9 @@ export interface FileRoutesByFullPath {
   '/watchlist': typeof WatchlistRoute
   '/api/content': typeof ApiContentRoute
   '/collection/$id': typeof CollectionIdRoute
+  '/lounge/$id': typeof LoungeIdRoute
   '/original/$id': typeof OriginalIdRoute
+  '/party/$code': typeof PartyCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/post/$id': typeof PostIdRoute
   '/api/media/img': typeof ApiMediaImgRoute
@@ -181,6 +202,7 @@ export interface FileRoutesByTo {
   '/compare': typeof CompareRoute
   '/explore': typeof ExploreRoute
   '/game': typeof GameRoute
+  '/live': typeof LiveRoute
   '/login': typeof LoginRoute
   '/posts': typeof PostsRoute
   '/search': typeof SearchRoute
@@ -188,7 +210,9 @@ export interface FileRoutesByTo {
   '/watchlist': typeof WatchlistRoute
   '/api/content': typeof ApiContentRoute
   '/collection/$id': typeof CollectionIdRoute
+  '/lounge/$id': typeof LoungeIdRoute
   '/original/$id': typeof OriginalIdRoute
+  '/party/$code': typeof PartyCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/post/$id': typeof PostIdRoute
   '/api/media/img': typeof ApiMediaImgRoute
@@ -207,6 +231,7 @@ export interface FileRoutesById {
   '/compare': typeof CompareRoute
   '/explore': typeof ExploreRoute
   '/game': typeof GameRoute
+  '/live': typeof LiveRoute
   '/login': typeof LoginRoute
   '/posts': typeof PostsRoute
   '/search': typeof SearchRoute
@@ -214,7 +239,9 @@ export interface FileRoutesById {
   '/watchlist': typeof WatchlistRoute
   '/api/content': typeof ApiContentRoute
   '/collection/$id': typeof CollectionIdRoute
+  '/lounge/$id': typeof LoungeIdRoute
   '/original/$id': typeof OriginalIdRoute
+  '/party/$code': typeof PartyCodeRoute
   '/person/$id': typeof PersonIdRoute
   '/post/$id': typeof PostIdRoute
   '/api/media/img': typeof ApiMediaImgRoute
@@ -234,6 +261,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/explore'
     | '/game'
+    | '/live'
     | '/login'
     | '/posts'
     | '/search'
@@ -241,7 +269,9 @@ export interface FileRouteTypes {
     | '/watchlist'
     | '/api/content'
     | '/collection/$id'
+    | '/lounge/$id'
     | '/original/$id'
+    | '/party/$code'
     | '/person/$id'
     | '/post/$id'
     | '/api/media/img'
@@ -259,6 +289,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/explore'
     | '/game'
+    | '/live'
     | '/login'
     | '/posts'
     | '/search'
@@ -266,7 +297,9 @@ export interface FileRouteTypes {
     | '/watchlist'
     | '/api/content'
     | '/collection/$id'
+    | '/lounge/$id'
     | '/original/$id'
+    | '/party/$code'
     | '/person/$id'
     | '/post/$id'
     | '/api/media/img'
@@ -284,6 +317,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/explore'
     | '/game'
+    | '/live'
     | '/login'
     | '/posts'
     | '/search'
@@ -291,7 +325,9 @@ export interface FileRouteTypes {
     | '/watchlist'
     | '/api/content'
     | '/collection/$id'
+    | '/lounge/$id'
     | '/original/$id'
+    | '/party/$code'
     | '/person/$id'
     | '/post/$id'
     | '/api/media/img'
@@ -310,6 +346,7 @@ export interface RootRouteChildren {
   CompareRoute: typeof CompareRoute
   ExploreRoute: typeof ExploreRoute
   GameRoute: typeof GameRoute
+  LiveRoute: typeof LiveRoute
   LoginRoute: typeof LoginRoute
   PostsRoute: typeof PostsRoute
   SearchRoute: typeof SearchRoute
@@ -317,7 +354,9 @@ export interface RootRouteChildren {
   WatchlistRoute: typeof WatchlistRoute
   ApiContentRoute: typeof ApiContentRoute
   CollectionIdRoute: typeof CollectionIdRoute
+  LoungeIdRoute: typeof LoungeIdRoute
   OriginalIdRoute: typeof OriginalIdRoute
+  PartyCodeRoute: typeof PartyCodeRoute
   PersonIdRoute: typeof PersonIdRoute
   PostIdRoute: typeof PostIdRoute
   ApiMediaImgRoute: typeof ApiMediaImgRoute
@@ -373,6 +412,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/live': {
+      id: '/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof LiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -422,11 +468,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lounge/$id': {
+      id: '/lounge/$id'
+      path: '/lounge/$id'
+      fullPath: '/lounge/$id'
+      preLoaderRoute: typeof LoungeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/original/$id': {
       id: '/original/$id'
       path: '/original/$id'
       fullPath: '/original/$id'
       preLoaderRoute: typeof OriginalIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/party/$code': {
+      id: '/party/$code'
+      path: '/party/$code'
+      fullPath: '/party/$code'
+      preLoaderRoute: typeof PartyCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/person/$id': {
@@ -502,6 +562,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareRoute: CompareRoute,
   ExploreRoute: ExploreRoute,
   GameRoute: GameRoute,
+  LiveRoute: LiveRoute,
   LoginRoute: LoginRoute,
   PostsRoute: PostsRoute,
   SearchRoute: SearchRoute,
@@ -509,7 +570,9 @@ const rootRouteChildren: RootRouteChildren = {
   WatchlistRoute: WatchlistRoute,
   ApiContentRoute: ApiContentRoute,
   CollectionIdRoute: CollectionIdRoute,
+  LoungeIdRoute: LoungeIdRoute,
   OriginalIdRoute: OriginalIdRoute,
+  PartyCodeRoute: PartyCodeRoute,
   PersonIdRoute: PersonIdRoute,
   PostIdRoute: PostIdRoute,
   ApiMediaImgRoute: ApiMediaImgRoute,
