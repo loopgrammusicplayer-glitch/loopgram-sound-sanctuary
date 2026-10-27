@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { InstallButton } from "./InstallButton";
 import { Bell, Bookmark, LayoutDashboard, LogIn, LogOut, CalendarDays, Compass, Gamepad2, Home, Mail, PlaySquare, Search, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { setState, useStore, getState } from "@/lib/store";
@@ -73,6 +74,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <button className="h-10 rounded-r-full border border-l-0 bg-secondary px-5" aria-label="Submit search"><Search className="h-4 w-4" /></button>
         </form>
         <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1 md:ml-0">
+          <InstallButton />
           <Link to="/search" search={{ q: "" }} className="rounded-full p-2 hover:bg-accent md:hidden" aria-label="Search"><Search className="h-5 w-5" /></Link>
           <button onClick={() => setState((s) => ({ ...s, lowData: !s.lowData }))} className="rounded-full p-2 hover:bg-accent" aria-pressed={lowData} aria-label={lowData ? "Low-data mode on" : "Low-data mode off"} title="Low-data mode">
             {lowData ? <WifiOff className="h-5 w-5" /> : <Wifi className="h-5 w-5" />}
