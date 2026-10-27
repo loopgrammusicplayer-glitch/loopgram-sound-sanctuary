@@ -10,7 +10,23 @@ export function makePartyCode(rand: () => number = Math.random): string {
   return s;
 }
 
-export type PartyState = { video: string; title: string; type: "movie" | "tv"; id: number; playing: boolean; pos: number; at: number; v: number };
+/** `video` = YouTube id (TMDB trailers, YouTube posts); `file` = direct media URL (owner uploads). Exactly one is set. */
+export type PartyState = { video: string; file?: string; title: string; type: "movie" | "tv" | "post"; id: number | string; playing: boolean; pos: number; at: number; v: number };
+
+/** Turns an owner post's video link into party media: YouTube id, direct file, or null (not syncable). */
+export function postPartyMedia(url: string): { video: string; file?: string } | null {
+  if (!url) return null;
+  let u: URL;
+  try { u = new URL(url); } catch { return null; }
+  if (u.protocol !== "https:") return null;
+  const host = u.hostname.replace(/^(www\.|m\.)/, "");
+  if (host === "youtu.be" || host === "youtube.com" || host === "youtube-nocookie.com") {
+    const parts = u.pathname.split("/").filter(Boolean);
+    const id = host === "youtu.be" ? parts[0] : u.searchParams.get("v") ?? (["shorts", "embed", "live"].includes(parts[0] ?? "") ? parts[1] : undefined);
+    return id && /^[A-Za-z0-9_-]{11}$/.test(id) ? { video: id } : null;
+  }
+  return /\.(mp4|webm|mov|m4v|mp3|m4a|ogg|wav)(\?|$)/i.test(u.pathname) ? { video: "", file: url } : null;
+}
 
 /** Where the shared video should be "now", given the last host update. */
 export function partyPosition(s: Pick<PartyState, "playing" | "pos" | "at">, now: number): number {
