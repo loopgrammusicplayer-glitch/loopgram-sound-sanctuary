@@ -8,7 +8,6 @@ import { createParty } from "@/lib/social.functions";
 import { partyAllowed } from "@/lib/live-settings";
 import { useLive } from "@/lib/use-live";
 import { postPartyMedia } from "@/lib/social";
-import { questStep } from "@/lib/streak";
 import { PostVideo } from "@/components/PostView";
 import { parseVideoSource } from "@/lib/video-source";
 import { PostTile } from "@/components/PostTile";
@@ -76,7 +75,7 @@ function PostWatch() {
                 <span className="my-2 w-px bg-border" />
                 <button onClick={() => setV(-1)} aria-pressed={vote === -1} aria-label="Dislike" className="px-4 py-2 hover:bg-accent"><ThumbsDown className={`h-4 w-4 ${vote === -1 ? "fill-current" : ""}`} /></button>
               </div>
-              <button onClick={() => { share(); questStep("share"); }} className={pill}><Share2 className="h-4 w-4" />Share</button>
+              <button onClick={() => { share() }} className={pill}><Share2 className="h-4 w-4" />Share</button>
               {partyAllowed(live, "post") && postPartyMedia(post.videoUrl) && <button onClick={async () => {
                 try {
                   const r = await createParty({ data: { kind: "post", id: post.id } });

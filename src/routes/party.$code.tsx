@@ -7,7 +7,6 @@ import { LiveChat, useMe } from "@/components/LiveChat";
 import { PARTY_CODE, partyPosition } from "@/lib/social";
 import { controlParty, getParty, partyChat, partyPing } from "@/lib/social.functions";
 import { shareLink } from "@/lib/share";
-import { questStep } from "@/lib/streak";
 
 export const Route = createFileRoute("/party/$code")({
   head: ({ params }) => ({
@@ -117,7 +116,7 @@ function PartyPage() {
           </div>
           <div className="flex gap-2">
             {isHost && joined && <button onClick={() => control(!d.state.playing)} className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">{d.state.playing ? <><Pause className="h-4 w-4" />Pause all</> : <><Play className="h-4 w-4" />Play for all</>}</button>}
-            <button onClick={() => { shareLink({ title: "Loop Party", text: `Watch ${d.state.title} with me on LoopgramChannel`, url }); questStep("share"); }} className="inline-flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Invite</button>
+            <button onClick={() => { shareLink({ title: "Loop Party", text: `Watch ${d.state.title} with me on LoopgramChannel`, url }) }} className="inline-flex items-center gap-1 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Invite</button>
             <button onClick={() => navigator.clipboard?.writeText(url)} className="rounded-full bg-secondary p-2" aria-label="Copy link"><Copy className="h-4 w-4" /></button>
           </div>
         </div>

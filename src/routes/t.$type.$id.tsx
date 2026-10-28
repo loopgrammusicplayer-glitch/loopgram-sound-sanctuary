@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { createParty } from "@/lib/social.functions";
 import { partyAllowed } from "@/lib/live-settings";
 import { useLive } from "@/lib/use-live";
-import { questStep } from "@/lib/streak";
 import { shareLink } from "@/lib/share";
 import { api, img, track } from "@/lib/api";
 import { signal, toggleSave, useStore } from "@/lib/store";
@@ -49,7 +48,6 @@ function TitlePage() {
     document.title = `${d.title} — LoopgramChannel`;
     signal("open", d.genres.map((g: any) => g.id), d.cast.slice(0, 3).map((c: any) => c.id));
     track(t, d.id, d.title, d.poster_path);
-    questStep("watch");
   }, [d?.id]);
 
   if (q.isPending) return <Page><div className="aspect-video animate-pulse bg-muted" /></Page>;
@@ -93,7 +91,7 @@ function TitlePage() {
             <button onClick={() => toggleSave({ id: d.id, type: t, title: d.title, poster: d.poster_path, date: d.next_episode?.air_date ?? d.date, genre_ids: d.genres.map((g: any) => g.id) })} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm">
               {saved ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}{saved ? "Saved" : "Save"}
             </button>
-            <button onClick={() => { share(); questStep("share"); }} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Share</button>
+            <button onClick={() => { share() }} className="flex items-center gap-1.5 rounded-full bg-secondary px-4 py-2 text-sm"><Share2 className="h-4 w-4" />Share</button>
             {trailer && partyAllowed(live, "tmdb") && <button onClick={async () => {
               try {
                 const r = await createParty({ data: { kind: "tmdb", video: trailer.key, title: d.title, type: t, id: d.id } });

@@ -3,7 +3,7 @@
 export type Role = "user" | "owner";
 
 /** Internal paths a normal user may be sent back to after login. Never external, never /studio. */
-const SAFE_USER_PREFIXES = ["/", "/explore", "/calendar", "/watchlist", "/game", "/az", "/compare", "/search", "/t/", "/watch/", "/person/", "/collection/", "/live", "/lounge/", "/party/"];
+const SAFE_USER_PREFIXES = ["/", "/explore", "/calendar", "/watchlist", "/game", "/az", "/compare", "/search", "/t/", "/watch/", "/person/", "/collection/", "/live", "/party/"];
 
 /** Returns a safe destination after login. Owner always lands in Studio; users only on allowlisted internal paths. */
 export function destinationFor(role: Role, requested?: string | null): string {
