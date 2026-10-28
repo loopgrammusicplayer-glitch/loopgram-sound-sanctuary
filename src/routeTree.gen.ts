@@ -23,7 +23,6 @@ import { Route as StudioRouteImport } from './routes/studio'
 import { Route as WatchlistRouteImport } from './routes/watchlist'
 import { Route as ApiContentRouteImport } from './routes/api/content'
 import { Route as CollectionIdRouteImport } from './routes/collection.$id'
-import { Route as LoungeIdRouteImport } from './routes/lounge.$id'
 import { Route as OriginalIdRouteImport } from './routes/original.$id'
 import { Route as PartyCodeRouteImport } from './routes/party.$code'
 import { Route as PersonIdRouteImport } from './routes/person.$id'
@@ -106,11 +105,6 @@ const CollectionIdRoute = CollectionIdRouteImport.update({
   path: '/collection/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoungeIdRoute = LoungeIdRouteImport.update({
-  id: '/lounge/$id',
-  path: '/lounge/$id',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OriginalIdRoute = OriginalIdRouteImport.update({
   id: '/original/$id',
   path: '/original/$id',
@@ -182,7 +176,6 @@ export interface FileRoutesByFullPath {
   '/watchlist': typeof WatchlistRoute
   '/api/content': typeof ApiContentRoute
   '/collection/$id': typeof CollectionIdRoute
-  '/lounge/$id': typeof LoungeIdRoute
   '/original/$id': typeof OriginalIdRoute
   '/party/$code': typeof PartyCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -210,7 +203,6 @@ export interface FileRoutesByTo {
   '/watchlist': typeof WatchlistRoute
   '/api/content': typeof ApiContentRoute
   '/collection/$id': typeof CollectionIdRoute
-  '/lounge/$id': typeof LoungeIdRoute
   '/original/$id': typeof OriginalIdRoute
   '/party/$code': typeof PartyCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -239,7 +231,6 @@ export interface FileRoutesById {
   '/watchlist': typeof WatchlistRoute
   '/api/content': typeof ApiContentRoute
   '/collection/$id': typeof CollectionIdRoute
-  '/lounge/$id': typeof LoungeIdRoute
   '/original/$id': typeof OriginalIdRoute
   '/party/$code': typeof PartyCodeRoute
   '/person/$id': typeof PersonIdRoute
@@ -269,7 +260,6 @@ export interface FileRouteTypes {
     | '/watchlist'
     | '/api/content'
     | '/collection/$id'
-    | '/lounge/$id'
     | '/original/$id'
     | '/party/$code'
     | '/person/$id'
@@ -297,7 +287,6 @@ export interface FileRouteTypes {
     | '/watchlist'
     | '/api/content'
     | '/collection/$id'
-    | '/lounge/$id'
     | '/original/$id'
     | '/party/$code'
     | '/person/$id'
@@ -325,7 +314,6 @@ export interface FileRouteTypes {
     | '/watchlist'
     | '/api/content'
     | '/collection/$id'
-    | '/lounge/$id'
     | '/original/$id'
     | '/party/$code'
     | '/person/$id'
@@ -354,7 +342,6 @@ export interface RootRouteChildren {
   WatchlistRoute: typeof WatchlistRoute
   ApiContentRoute: typeof ApiContentRoute
   CollectionIdRoute: typeof CollectionIdRoute
-  LoungeIdRoute: typeof LoungeIdRoute
   OriginalIdRoute: typeof OriginalIdRoute
   PartyCodeRoute: typeof PartyCodeRoute
   PersonIdRoute: typeof PersonIdRoute
@@ -468,13 +455,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CollectionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/lounge/$id': {
-      id: '/lounge/$id'
-      path: '/lounge/$id'
-      fullPath: '/lounge/$id'
-      preLoaderRoute: typeof LoungeIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/original/$id': {
       id: '/original/$id'
       path: '/original/$id'
@@ -570,7 +550,6 @@ const rootRouteChildren: RootRouteChildren = {
   WatchlistRoute: WatchlistRoute,
   ApiContentRoute: ApiContentRoute,
   CollectionIdRoute: CollectionIdRoute,
-  LoungeIdRoute: LoungeIdRoute,
   OriginalIdRoute: OriginalIdRoute,
   PartyCodeRoute: PartyCodeRoute,
   PersonIdRoute: PersonIdRoute,

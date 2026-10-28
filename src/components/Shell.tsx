@@ -1,20 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { InstallButton } from "./InstallButton";
-import { Flame } from "lucide-react";
-import { recordVisit, useStreak } from "@/lib/streak";
-import { useLive } from "@/lib/use-live";
-
-function StreakChip() {
-  const s = useStreak();
-  const live = useLive();
-  useEffect(() => { recordVisit(); }, []);
-  if (!live.streaksOn) return null;
-  return (
-    <Link to="/live" className="inline-flex items-center gap-0.5 rounded-full px-2 py-1.5 text-sm font-bold hover:bg-accent" aria-label={`${s.count} day streak, open Live`} title="Live: streaks, lounges, parties">
-      <Flame className="h-5 w-5 text-primary" />{s.count}
-    </Link>
-  );
-}
 import { Bell, Bookmark, LayoutDashboard, LogIn, LogOut, CalendarDays, Compass, Gamepad2, Home, Mail, PlaySquare, Search, Wifi, WifiOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { setState, useStore, getState } from "@/lib/store";
@@ -90,7 +75,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </form>
         <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1 md:ml-0">
           <InstallButton />
-          <StreakChip />
           <Link to="/search" search={{ q: "" }} className="rounded-full p-2 hover:bg-accent md:hidden" aria-label="Search"><Search className="h-5 w-5" /></Link>
           <button onClick={() => setState((s) => ({ ...s, lowData: !s.lowData }))} className="rounded-full p-2 hover:bg-accent" aria-pressed={lowData} aria-label={lowData ? "Low-data mode on" : "Low-data mode off"} title="Low-data mode">
             {lowData ? <WifiOff className="h-5 w-5" /> : <Wifi className="h-5 w-5" />}

@@ -77,7 +77,7 @@ function PartyPage() {
 
   if (!valid) return <Page><p className="p-6">This party link isn't valid.</p></Page>;
   if (q.isPending) return <Page><div className="aspect-video animate-pulse bg-muted" /></Page>;
-  if (!d) return <Page><div className="p-6"><p className="font-semibold">This party has ended or doesn't exist.</p><Link to="/live" className="mt-3 inline-block text-primary underline">Go to Live</Link></div></Page>;
+  if (!d) return <Page><div className="p-6"><p className="font-semibold">This party has ended or doesn't exist.</p><Link to="/live" className="mt-3 inline-block text-primary underline">Start or join another party</Link></div></Page>;
 
   const isHost = !!hostKey;
   const control = async (playing: boolean) => {
@@ -121,7 +121,7 @@ function PartyPage() {
           </div>
         </div>
         {!isHost && <p className="text-xs text-muted-foreground">The host controls play and pause. Your video follows along automatically.</p>}
-        <LiveChat chat={d.chat} onSend={async (name, msg) => { await partyChat({ data: { code, name, msg } }); q.refetch(); }} />
+        {d.chatOn && <LiveChat chat={d.chat} onSend={async (name, msg) => { await partyChat({ data: { code, name, msg } }); q.refetch(); }} />}
         {d.state.type === "post"
           ? <Link to="/post/$id" params={{ id: String(d.state.id) }} className="text-sm text-primary underline">About this video</Link>
           : <Link to="/t/$type/$id" params={{ type: d.state.type, id: String(d.state.id) }} className="text-sm text-primary underline">About this title</Link>}
