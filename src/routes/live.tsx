@@ -1,21 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { Flame, Headphones, Users } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Users } from "lucide-react";
 import { Page } from "@/components/lg";
-import { BADGES, LOUNGES } from "@/lib/social";
-import { activeQuests } from "@/lib/live-settings";
+import { PARTY_CODE } from "@/lib/social";
 import { useLive } from "@/lib/use-live";
-import { loungeCounts } from "@/lib/social.functions";
-import { recordVisit, useStreak } from "@/lib/streak";
 
 export const Route = createFileRoute("/live")({
   head: () => ({
     meta: [
-      { title: "Live — Streaks, Lounges & Watch Parties | LoopgramChannel" },
-      { name: "description", content: "Keep your daily streak, finish quests, listen together in Lounges and watch with friends in a Loop Party." },
-      { property: "og:title", content: "Live on LoopgramChannel" },
-      { property: "og:description", content: "Daily streaks, listening lounges and watch-together parties." },
+      { title: "Loop Party — Watch Together | LoopgramChannel" },
+      { name: "description", content: "Watch movies, shows and channel videos in sync with friends, with live chat." },
+      { property: "og:title", content: "Loop Party on LoopgramChannel" },
+      { property: "og:description", content: "Start or join a watch-together party with live chat." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -24,65 +20,30 @@ export const Route = createFileRoute("/live")({
 });
 
 function LivePage() {
-  const s = useStreak();
-  useEffect(() => { recordVisit(); }, []);
-  const counts = useQuery({ queryKey: ["lounge-counts"], queryFn: () => loungeCounts(), refetchInterval: 15_000 });
-  const next = BADGES.find((b) => b.days > s.count);
   const live = useLive();
-  const quests = activeQuests(live);
-  const lounges = LOUNGES.filter((l) => live.lounges[l.id]?.on !== false);
+  const nav = useNavigate();
+  const [code, setCode] = useState("");
+  const clean = code.trim().toUpperCase();
   return (
     <Page>
       <div className="space-y-6 p-4">
-        {live.streaksOn && <>
         <section className="rounded-2xl border bg-card p-5">
-          <div className="flex items-center gap-3">
-            <Flame className="h-10 w-10 text-primary" />
-            <div>
-              <p className="text-3xl font-black">{s.count} day streak</p>
-              <p className="text-sm text-muted-foreground">Best {s.best} · {s.points} points{next ? ` · ${next.days - s.count} more day(s) for “${next.name}”` : ""}</p>
+          <h1 className="flex items-center gap-2 text-2xl font-black"><Users className="h-6 w-6 text-primary" />Loop Party</h1>
+          {!live.partyOn ? <p className="mt-2 text-sm text-muted-foreground">Watch parties are closed right now. Please check back later.</p> : <>
+            <p className="mt-2 text-sm text-muted-foreground">Open {live.partyTmdb && live.partyPosts ? "any movie, show or channel video" : live.partyTmdb ? "any movie or show" : "any channel video"} and tap <b>Watch together</b>. Send the link to friends — everyone plays and pauses at the same moment{live.partyChat ? ", with live chat" : ""}.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {live.partyTmdb && <Link to="/explore" className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Pick a movie or show</Link>}
+              {live.partyPosts && <Link to="/posts" className="rounded-full bg-secondary px-4 py-2 text-sm font-semibold">Pick a channel video</Link>}
             </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {BADGES.map((b) => <span key={b.name} className={`rounded-full px-3 py-1 text-xs ${s.best >= b.days ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}>{b.name} · {b.days}d</span>)}
-          </div>
+          </>}
         </section>
-
-        <section>
-          <h2 className="mb-2 text-lg font-bold">Today's quests</h2>
-          <ul className="space-y-2">
-            {quests.map((q) => {
-              const v = s.quests[q.id], done = v >= q.goal;
-              return (
-                <li key={q.id} className="rounded-xl border p-3">
-                  <div className="flex justify-between text-sm"><span className={done ? "line-through text-muted-foreground" : ""}>{q.label}</span><span className="font-semibold">+{q.points}</span></div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary transition-all" style={{ width: `${(v / q.goal) * 100}%` }} /></div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        </>}
-
-        {live.loungesOn && lounges.length > 0 && <section>
-          <h2 className="mb-2 flex items-center gap-2 text-lg font-bold"><Headphones className="h-5 w-5" />Listening Lounges</h2>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {lounges.map((l) => (
-              <Link key={l.id} to="/lounge/$id" params={{ id: l.id }} className="rounded-xl border p-4 hover:bg-accent">
-                <p className="font-bold">{l.name}</p>
-                <p className="text-sm text-muted-foreground">{l.blurb}</p>
-                <p className="mt-2 flex items-center gap-1 text-xs"><span className="h-2 w-2 animate-pulse rounded-full bg-primary" />{counts.data?.[l.id] ?? 0} listening now</p>
-              </Link>
-            ))}
+        {live.partyOn && <form className="rounded-2xl border p-5" onSubmit={(e) => { e.preventDefault(); if (PARTY_CODE.test(clean)) nav({ to: "/party/$code", params: { code: clean } }); }}>
+          <h2 className="font-bold">Have a party code?</h2>
+          <div className="mt-2 flex gap-2">
+            <input value={code} onChange={(e) => setCode(e.target.value)} maxLength={6} placeholder="6-letter code" aria-label="Party code" className="h-10 w-40 rounded-lg border bg-background px-3 uppercase tracking-widest" />
+            <button disabled={!PARTY_CODE.test(clean)} className="rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50">Join</button>
           </div>
-        </section>}
-
-        {live.partyOn && <section className="rounded-xl border p-4">
-          <h2 className="flex items-center gap-2 text-lg font-bold"><Users className="h-5 w-5" />Loop Party</h2>
-          <p className="text-sm text-muted-foreground">Open {live.partyTmdb && live.partyPosts ? "any movie, show or channel video" : live.partyTmdb ? "any movie or show" : "any channel video"} and tap <b>Watch together</b>. You'll get a link to send to friends — everyone sees the video play and pause at the same moment, with live chat.</p>
-          <Link to={live.partyTmdb ? "/explore" : "/posts"} className="mt-3 inline-block rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground">Pick something to watch</Link>
-        </section>}
+        </form>}
       </div>
     </Page>
   );
