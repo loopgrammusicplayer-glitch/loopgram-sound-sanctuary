@@ -1,13 +1,13 @@
-// Loop Party live state. Upstash Redis only (short TTLs); page reads never touch DynamoDB/R2.
-// Load protection: per-isolate memo on hot reads (many viewers of one room = ~1 Redis call per second per instance),
-// per-IP local rate limits on writes, and fail-open nulls if Redis is down.
+// Loop Party live state. Redis first, DynamoDB fallback (party-store.server.ts) so parties keep working
+// when Redis is down or over its plan limit. Load protection: per-isolate memo on hot reads,
+// per-IP local rate limits on writes.
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
-import { makePartyCode, PARTY_CODE, postPartyMedia, YT_ID, type PartyState } from "./social";
+import { makePartyCode, PARTY_CODE, postPartyMedia, type PartyState } from "./social";
+import { YT_ID } from "./social";
 import { LiveSettings, parseLive, partyAllowed, type LiveSettingsT } from "./live-settings";
 
-const TTL = 6 * 3600;
 const memo = new Map<string, { v: unknown; exp: number }>();
 async function cached<T>(key: string, ms: number, fn: () => Promise<T>): Promise<T> {
   const hit = memo.get(key);
@@ -25,19 +25,20 @@ const parse = <T,>(s: unknown): T | null => { try { return typeof s === "string"
 const Name = z.string().trim().min(1).max(24);
 const Msg = z.string().trim().min(1).max(200);
 type Chat = { n: string; m: string; t: number };
+const store = () => import("./party-store.server");
 
-// ---------- Owner live settings (Redis `site:live`) ----------
+// ---------- Owner live settings (Redis `site:live`, durable copy in DynamoDB OWNER#site / LIVE) ----------
 async function readLive(): Promise<LiveSettingsT> {
   return cached("live", 5000, async () => {
-    const { redis } = await import("./backend.server");
+    const { redis, dynamo } = await import("./backend.server");
     const raw = await redis(["GET", "site:live"]).catch(() => null);
-    return parseLive(parse(raw));
+    if (typeof raw === "string") return parseLive(parse(raw));
+    const r = await dynamo("GetItem", { TableName: process.env.DYNAMODB_TABLE_NAME, Key: { PK: { S: "OWNER#site" }, SK: { S: "LIVE" } } }).catch(() => null);
+    return parseLive(parse(r?.Item?.d?.S));
   });
 }
-/** Public: which live features the owner has switched on. Fails open to defaults. */
 export const getLiveSettings = createServerFn({ method: "GET" }).handler(() => readLive().catch(() => parseLive({})));
 
-// ---------- Loop Party ----------
 const PartyIn = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("tmdb"), video: z.string().regex(YT_ID), title: z.string().trim().max(200), type: z.enum(["movie", "tv"]), id: z.number().int().positive() }),
   z.object({ kind: z.literal("post"), id: z.string().regex(/^[a-z0-9-]{3,64}$/) }),
@@ -49,17 +50,16 @@ export const createParty = createServerFn({ method: "POST" })
     await guard("pc", 10);
     const live = await readLive();
     if (!partyAllowed(live, data.kind)) throw new Error("Watch together is switched off for this right now.");
-    const { redis } = await import("./backend.server");
-    await redis(["ZREMRANGEBYSCORE", "party:active", 0, Date.now() - TTL * 1000]).catch(() => null);
-    const open = Number(await redis(["ZCARD", "party:active"]).catch(() => 0)) || 0;
+    const st = await store();
+    const open = (await st.listActive(live.maxParties + 1)).length;
     if (open >= live.maxParties) throw new Error("All watch rooms are full right now. Please try again soon.");
     let base: Pick<PartyState, "video" | "file" | "title" | "type" | "id">;
     if (data.kind === "tmdb") {
       base = { video: data.video, title: data.title, type: data.type, id: data.id };
     } else {
       // Media comes from the owner's published post, never from the browser.
-      const posts = parse<{ id: string; title?: string; videoUrl?: string; published?: boolean }[]>(await redis(["GET", "site:posts"])) ?? [];
-      const p = posts.find((x) => x.id === data.id && x.published);
+      const { readPosts } = await import("./posts.functions");
+      const p = (await readPosts()).find((x) => x.id === data.id && x.published);
       const media = p ? postPartyMedia(p.videoUrl ?? "") : null;
       if (!p || !media) throw new Error("This video can't be watched together.");
       base = { ...media, title: (p.title || "Video").slice(0, 200), type: "post", id: p.id };
@@ -68,9 +68,8 @@ export const createParty = createServerFn({ method: "POST" })
     for (let i = 0; i < 5; i++) {
       const code = makePartyCode();
       const s: PartyState = { ...base, playing: false, pos: 0, at: Date.now(), v: 1 };
-      const ok = await redis(["SET", `party:${code}`, JSON.stringify({ ...s, hostKey }), "EX", TTL, "NX"]);
-      if (ok === "OK") {
-        void redis(["ZADD", "party:active", Date.now(), code]).catch(() => null);
+      if (await st.setState(code, JSON.stringify({ ...s, hostKey }), true)) {
+        await st.addActive(code);
         return { code, hostKey };
       }
     }
@@ -87,15 +86,14 @@ async function owner(token: string) {
 
 export const studioLive = createServerFn({ method: "POST" }).inputValidator((d: unknown) => tok.parse(d)).handler(async ({ data }) => {
   await owner(data.token);
-  const { redis, redisPipeline } = await import("./backend.server");
-  const settings = parseLive(parse(await redis(["GET", "site:live"])));
-  await redis(["ZREMRANGEBYSCORE", "party:active", 0, Date.now() - TTL * 1000]);
-  const codes = ((await redis(["ZREVRANGE", "party:active", 0, 49])) as string[] | null) ?? [];
-  const rows = codes.length ? await redisPipeline(codes.flatMap((c) => [["GET", `party:${c}`], ["ZCOUNT", `party:${c}:here`, Date.now() - 30_000, "+inf"]])) : [];
-  const parties = codes.map((code, i) => {
-    const p = parse<PartyState>(rows[i * 2]);
-    return p ? { code, title: p.title, type: p.type, id: String(p.id), playing: p.playing, people: Number(rows[i * 2 + 1]) || 0 } : null;
-  }).filter(Boolean) as { code: string; title: string; type: string; id: string; playing: boolean; people: number }[];
+  memo.delete("live");
+  const settings = await readLive();
+  const st = await store();
+  const codes = await st.listActive(50);
+  const parties = (await Promise.all(codes.map(async (code) => {
+    const p = parse<PartyState>(await st.getState(code));
+    return p ? { code, title: p.title, type: p.type, id: String(p.id), playing: p.playing, people: await st.countHere(code) } : null;
+  }))).filter(Boolean) as { code: string; title: string; type: string; id: string; playing: boolean; people: number }[];
   return { settings, parties };
 });
 
@@ -103,9 +101,12 @@ export const studioLiveSave = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => tok.extend({ settings: LiveSettings }).parse(d))
   .handler(async ({ data }) => {
     const me = await owner(data.token);
-    const { redis } = await import("./backend.server");
+    const { redis, dynamo } = await import("./backend.server");
     const { audit } = await import("./auth.server");
-    await redis(["SET", "site:live", JSON.stringify(parseLive(data.settings))]);
+    const json = JSON.stringify(parseLive(data.settings));
+    await dynamo("PutItem", { TableName: process.env.DYNAMODB_TABLE_NAME, Item: { PK: { S: "OWNER#site" }, SK: { S: "LIVE" }, d: { S: json } } });
+    const ok = await redis(["SET", "site:live", json]).catch(() => null);
+    if (ok !== "OK") await redis(["DEL", "site:live"]).catch(() => null);
     memo.delete("live");
     await audit(me, "live.settings", "site:live", "ok");
     return { ok: true };
@@ -115,9 +116,8 @@ export const studioEndParty = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => tok.extend({ code: z.string().regex(PARTY_CODE) }).parse(d))
   .handler(async ({ data }) => {
     const me = await owner(data.token);
-    const { redisPipeline } = await import("./backend.server");
     const { audit } = await import("./auth.server");
-    await redisPipeline([["DEL", `party:${data.code}`, `party:${data.code}:chat`, `party:${data.code}:here`], ["ZREM", "party:active", data.code]]);
+    await (await store()).endParty(data.code);
     memo.delete(`p:${data.code}`);
     await audit(me, "live.party.end", data.code, "ok");
     return { ok: true };
@@ -127,9 +127,8 @@ export const studioClearChat = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => tok.extend({ code: z.string().regex(PARTY_CODE) }).parse(d))
   .handler(async ({ data }) => {
     const me = await owner(data.token);
-    const { redis } = await import("./backend.server");
     const { audit } = await import("./auth.server");
-    await redis(["DEL", `party:${data.code}:chat`]);
+    await (await store()).clearChat(data.code);
     memo.delete(`p:${data.code}`);
     await audit(me, "live.party.clearChat", data.code, "ok");
     return { ok: true };
@@ -139,10 +138,10 @@ export const studioEndAll = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => tok.parse(d))
   .handler(async ({ data }) => {
     const me = await owner(data.token);
-    const { redis, redisPipeline } = await import("./backend.server");
     const { audit } = await import("./auth.server");
-    const codes = ((await redis(["ZRANGE", "party:active", 0, -1])) as string[] | null) ?? [];
-    if (codes.length) await redisPipeline([...codes.map((c) => ["DEL", `party:${c}`, `party:${c}:chat`, `party:${c}:here`]), ["DEL", "party:active"]]);
+    const st = await store();
+    const codes = await st.listActive(1000);
+    for (const c of codes) await st.endParty(c);
     memo.clear();
     await audit(me, "live.party.endAll", String(codes.length), "ok");
     return { ended: codes.length };
@@ -151,29 +150,25 @@ export const studioEndAll = createServerFn({ method: "POST" })
 export const getParty = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ code: z.string().regex(PARTY_CODE) }).parse(d))
   .handler(async ({ data }) => cached(`p:${data.code}`, 800, async () => {
-    const { redisPipeline } = await import("./backend.server");
-    const [raw, chat, people] = await redisPipeline([
-      ["GET", `party:${data.code}`],
-      ["LRANGE", `party:${data.code}:chat`, 0, 39],
-      ["ZCOUNT", `party:${data.code}:here`, Date.now() - 30_000, "+inf"],
-    ]);
-    const p = parse<PartyState & { hostKey?: string }>(raw);
+    const st = await store();
+    const p = parse<PartyState & { hostKey?: string }>(await st.getState(data.code));
     if (!p) return null;
     const live = await readLive();
     if (!partyAllowed(live, p.type === "post" ? "post" : "tmdb")) return null;
+    const [chat, people] = await Promise.all([live.partyChat ? st.getChat(data.code, 40) : Promise.resolve([]), st.countHere(data.code)]);
     delete p.hostKey;
-    return { state: p as PartyState, chatOn: live.partyChat, chat: live.partyChat ? ((chat as string[]) ?? []).map((c) => parse<Chat>(c)).filter(Boolean).reverse() as Chat[] : [], people: Number(people) || 0, now: Date.now() };
+    return { state: p as PartyState, chatOn: live.partyChat, chat: chat.map((c) => parse<Chat>(c)).filter(Boolean).reverse() as Chat[], people, now: Date.now() };
   }));
 
 export const controlParty = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ code: z.string().regex(PARTY_CODE), hostKey: z.string().uuid(), playing: z.boolean(), pos: z.number().min(0).max(86400) }).parse(d))
   .handler(async ({ data }) => {
     await guard("px", 120);
-    const { redis } = await import("./backend.server");
-    const p = parse<PartyState & { hostKey: string }>(await redis(["GET", `party:${data.code}`]));
+    const st = await store();
+    const p = parse<PartyState & { hostKey: string }>(await st.getState(data.code));
     if (!p || p.hostKey !== data.hostKey) throw new Error("Only the host can control playback.");
     const next = { ...p, playing: data.playing, pos: data.pos, at: Date.now(), v: p.v + 1 };
-    await redis(["SET", `party:${data.code}`, JSON.stringify(next), "EX", TTL]);
+    if (!(await st.setState(data.code, JSON.stringify(next)))) throw new Error("Couldn't update the party, try again.");
     memo.delete(`p:${data.code}`);
     return { ok: true };
   });
@@ -182,23 +177,16 @@ export const partyPing = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ code: z.string().regex(PARTY_CODE), me: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     await guard("pp", 30);
-    const { redisPipeline } = await import("./backend.server");
-    const k = `party:${data.code}:here`;
-    await redisPipeline([["ZADD", k, Date.now(), data.me], ["ZREMRANGEBYSCORE", k, 0, Date.now() - 60_000], ["EXPIRE", k, TTL]]);
+    await (await store()).ping(data.code, data.me).catch(() => null);
     return { ok: true };
   });
-
-async function postChat(key: string, name: string, msg: string, ttl: number) {
-  const { redisPipeline } = await import("./backend.server");
-  await redisPipeline([["LPUSH", key, JSON.stringify({ n: name, m: msg, t: Date.now() })], ["LTRIM", key, 0, 99], ["EXPIRE", key, ttl]]);
-}
 
 export const partyChat = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ code: z.string().regex(PARTY_CODE), name: Name, msg: Msg }).parse(d))
   .handler(async ({ data }) => {
     await guard("pm", 20);
     if (!(await readLive()).partyChat) throw new Error("Chat is switched off.");
-    await postChat(`party:${data.code}:chat`, data.name, data.msg, TTL);
+    await (await store()).addChat(data.code, { n: data.name, m: data.msg, t: Date.now() });
     memo.delete(`p:${data.code}`);
     return { ok: true };
   });

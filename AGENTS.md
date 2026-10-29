@@ -27,4 +27,4 @@
 - Periodic work (TMDB import step + SQS drain) runs from `heartbeat()` (heartbeat.server.ts), started via `ctx.waitUntil` in src/server.ts and gated by Redis `lg:heartbeat` (≈1/min across instances). Why: no external scheduler; every step is idempotent so cut-off runs just retry.
 - Owner posts are searchable only through the separate Algolia index `loopgram_posts`, written by `syncPost()`/`reconcilePosts()` from the DynamoDB post state (PUBLISHED only). Why: keeps the two content sources distinguishable and drafts out of search.
 
-- Loop Party keeps state only in Redis with TTLs via social.functions.ts; hot reads use a short per-isolate memo and writes use per-IP local rate limits. Why: protects Redis under bursts and keeps DynamoDB/R2 off ordinary page reads.
+- Loop Party state goes only through party-store.server.ts: Redis first with TTLs, DynamoDB (PK PARTY#<code>, `exp` attribute filtered on read) when Redis is down or over quota; hot reads use a per-isolate memo and writes use per-IP local rate limits. Why: parties must keep working when one service hits a plan limit.
