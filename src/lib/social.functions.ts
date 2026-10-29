@@ -33,7 +33,7 @@ async function readLive(): Promise<LiveSettingsT> {
     const { redis, dynamo } = await import("./backend.server");
     const raw = await redis(["GET", "site:live"]).catch(() => null);
     if (typeof raw === "string") return parseLive(parse(raw));
-    const r = await dynamo("GetItem", { TableName: process.env.DYNAMODB_TABLE_NAME, Key: { PK: { S: "OWNER#site" }, SK: { S: "LIVE" } } }).catch(() => null);
+    const r = await dynamo("GetItem", { TableName: process.env["DYNAMODB_TABLE_NAME"], Key: { PK: { S: "OWNER#site" }, SK: { S: "LIVE" } } }).catch(() => null);
     return parseLive(parse(r?.Item?.d?.S));
   });
 }
@@ -104,7 +104,7 @@ export const studioLiveSave = createServerFn({ method: "POST" })
     const { redis, dynamo } = await import("./backend.server");
     const { audit } = await import("./auth.server");
     const json = JSON.stringify(parseLive(data.settings));
-    await dynamo("PutItem", { TableName: process.env.DYNAMODB_TABLE_NAME, Item: { PK: { S: "OWNER#site" }, SK: { S: "LIVE" }, d: { S: json } } });
+    await dynamo("PutItem", { TableName: process.env["DYNAMODB_TABLE_NAME"], Item: { PK: { S: "OWNER#site" }, SK: { S: "LIVE" }, d: { S: json } } });
     const ok = await redis(["SET", "site:live", json]).catch(() => null);
     if (ok !== "OK") await redis(["DEL", "site:live"]).catch(() => null);
     memo.delete("live");
