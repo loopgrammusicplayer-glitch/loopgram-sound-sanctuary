@@ -35,7 +35,7 @@ async function readDurable(): Promise<PostT[] | null> {
 
 // Single-flight: when the cache is cold, concurrent requests in this instance share one DynamoDB read.
 let inflight: Promise<PostT[]> | null = null;
-async function readPosts(): Promise<PostT[]> {
+export async function readPosts(): Promise<PostT[]> {
   const { redis } = await import("./backend.server");
   const raw = (await redis(["GET", "site:posts"]).catch(() => null)) as string | null;
   if (typeof raw === "string") { try { return Posts.parse(JSON.parse(raw)); } catch { /* fall through */ } }
